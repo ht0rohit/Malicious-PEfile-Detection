@@ -43,6 +43,7 @@ X_train, X_split, y_train, y_split = train_test_split(X, y , test_size=0.2, rand
 X_dev, X_test, y_dev, y_test = train_test_split(X_split, y_split , test_size=0.5, random_state = 0)
 split_data = [X_train, X_dev, X_test, y_train, y_dev, y_test]
 
+#GroupBy no. of Malignant & Benign files to verify False_negatives & False_positives
 count = 0; count1 = 0
 for val in y_dev:
 	if val == 'Benign':
@@ -56,6 +57,7 @@ print("Malignant: " + str(count1))
 #Select Features
 extratrees = ek.ExtraTreesClassifier(criterion = 'entropy', random_state = 10).fit(X,y)
 model = SelectFromModel(extratrees, prefit = True)
+#Transform train/dev/test set with selected features
 X_train = model.transform(X_train)
 X_dev = model.transform(X_dev)
 X_test = model.transform(X_test)
@@ -69,10 +71,12 @@ for f in range(nbfeatures):
 	features.append(dataset.columns[2+f])
 
 
+#Normalize data on X_train
 scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)	
 X_dev = scaler.transform(X_dev)
 X_test = scaler.transform(X_test)
+
 
 ### ----------------------------------
 ### Comment out the block to evaluate performance on these models
@@ -95,8 +99,10 @@ X_test = scaler.transform(X_test)
 	
 # winner = max(results, key=results.get)
 # print("Best model: " + winner)
-open('features.pkl', 'wb').write(pickle.dumps(features))
-open('split_data.pkl', 'wb').write(pickle.dumps(split_data))
+
+# Write the features nd Data to a file
+open(os.path.join("Models (FeatureSelectionTechnique)/1ExtraTreesClassifier/features.pkl"), 'wb').write(pickle.dumps(features))
+open(os.path.join("Models (FeatureSelectionTechnique)/1ExtraTreesClassifier/split_data.pkl"), 'wb').write(pickle.dumps(split_data))
 
 
 # clf = model[winner]
