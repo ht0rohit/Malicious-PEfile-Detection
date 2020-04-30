@@ -32,6 +32,8 @@ RESULTS_FORMAT_STRING = "\tTotal predictions: {:4d}\tTrue positives: {:4d}\tFals
 os.chdir(r"E:\00Malicious-PEfile-Detection")
 dataset = pickle.loads(open(os.path.join('Data/dataset.pkl'),'rb').read())
 print(dataset.groupby(dataset['legitimate']).size())
+dataset['legitimate'].replace('Benign', 1, inplace=True)
+dataset['legitimate'].replace('Malignant', 0, inplace=True)
 
 
 #dataset = pd.read_csv('E:/00Malicious-PEfile-Detection/Data/updated_data.csv', low_memory=False)
@@ -41,7 +43,7 @@ y = dataset['legitimate'].values
 #train/dev/test split
 X_train, X_split, y_train, y_split = train_test_split(X, y , test_size=0.2, random_state = 0)
 X_dev, X_test, y_dev, y_test = train_test_split(X_split, y_split , test_size=0.5, random_state = 0)
-split_data = [X_train, X_dev, X_test, y_train, y_dev, y_test]
+
 
 #GroupBy no. of Malignant & Benign files to verify False_negatives & False_positives
 count = 0; count1 = 0
@@ -62,6 +64,7 @@ X_train = model.transform(X_train)
 X_dev = model.transform(X_dev)
 X_test = model.transform(X_test)
 nbfeatures = X_train.shape[1]
+# print(str(X_train.shape) + "	" + str(X_dev.shape) + "	" + str(X_test.shape))
 
 features = []
 index = np.argsort(extratrees.feature_importances_)[::-1][:nbfeatures]
@@ -101,6 +104,7 @@ X_test = scaler.transform(X_test)
 # print("Best model: " + winner)
 
 # Write the features nd Data to a file
+split_data = [X_train.T, X_dev.T, X_test.T, y_train, y_dev, y_test]
 open(os.path.join("Models (FeatureSelectionTechnique)/1ExtraTreesClassifier/features.pkl"), 'wb').write(pickle.dumps(features))
 open(os.path.join("Models (FeatureSelectionTechnique)/1ExtraTreesClassifier/split_data.pkl"), 'wb').write(pickle.dumps(split_data))
 
