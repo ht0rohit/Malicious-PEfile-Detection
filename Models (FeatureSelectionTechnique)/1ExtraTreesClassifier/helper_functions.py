@@ -1,4 +1,6 @@
 import math
+import os
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -8,9 +10,9 @@ Each module can be tested independently by passing values through a seperate fil
 
 
 
-def random_mini_batches(X, Y, mini_batch_size = 64, seed = 0):
+def random_mini_batches(X, Y, mini_batch_size, seed):
 	""" Creates a list of random minibatches from (X_train, Y_train)
-	Returns: mini_batches -- list of synchronous (mini_batch_X, mini_batch_Y) """
+	Returns: mini_batches - list of synchronous (mini_batch_X, mini_batch_Y) """
 	
 	np.random.seed(seed) # To make your "random" minibatches the same at each run
 	m = X.shape[1]		 # number of training examples
@@ -41,24 +43,26 @@ def random_mini_batches(X, Y, mini_batch_size = 64, seed = 0):
 
 	
 def sigmoid(z):
-	""" Arguments: z -- A scalar or numpy array of any size """
+	""" Arguments: z - A scalar or numpy array of any size """
 	sigm = 1 / (1 + np.exp(-z))
+	cache = sigm
 	
-	return sigm
+	return sigm, cache
 	
 	
 	
 def relu(z):
-	rel = np.maximum(0,x)
+	rel = np.maximum(0,z)
+	cache = z
 	
-	return rel
+	return rel, cache
 	
 	
 	
 def sigmoid_backward(dA, cache):
-	""" Returns: dZ -- Gradient of the cost with respect to Z """
+	""" Returns: dZ - Gradient of the cost with respect to Z """
 	Z = cache
-	sigm = sigmoid(Z)
+	sigm = 1 / (1 + np.exp(-Z))
 	dZ = dA * sigm * (1-sigm)
 	
 	assert (dZ.shape == Z.shape)
@@ -81,39 +85,45 @@ def relu_backward(dA, cache):
 	
 	
 def initialize_parameters_random(layers):
-	""" Returns: parameters -- python dictionary containing your parameters "W1", "b1", ..., "WL", "bL" """ 
+	""" Returns: parameters - python dictionary containing your parameters "W1", "b1", ..., "WL", "bL" """ 
 	np.random.seed(3)
 	parameters = {}
 	L = len(layers)
 	
 	for l in range(1, L):
-		parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l-1]) * 0.01
-		parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
+		parameters['W' + str(l)] = np.random.randn(layers[l], layers[l-1]) * 0.001
+		parameters['b' + str(l)] = np.zeros((layers[l], 1))
+		
+	assert(parameters['W' + str(l)].shape == (layers[l], layers[l-1]))
+	assert(parameters['b' + str(l)].shape == (layers[l], 1))
 
 	return parameters
 	
 	
 	
-def initialize_parameters_he(layers_dims):
+def initialize_parameters_he(layers):
 	""" Initialize parameters based on the 'He' function.
 	'He' initialization works well for networks with ReLU activations """
 	np.random.seed(3)
 	parameters = {}
-	L = len(layers) - 1
+	L = len(layers)
 	 
-	for l in range(1, L + 1):
-		parameters['W' + str(l)] = np.random.randn(layers_dims[l], layers_dims[l-1]) * np.sqrt(2./layers_dims[l-1])
-		parameters['b' + str(l)] = np.zeros((layers_dims[l], 1))
+	for l in range(1, L):
+		parameters['W' + str(l)] = np.random.randn(layers[l], layers[l-1]) * np.sqrt(2./layers[l-1])
+		parameters['b' + str(l)] = np.zeros((layers[l], 1))
+		
+	assert(parameters['W' + str(l)].shape == (layers[l], layers[l-1]))
+	assert(parameters['b' + str(l)].shape == (layers[l], 1))
 		
 	return parameters
 	
 	
 	
 def linear_forward(A, W, b):
-	""" cache -- a python tuple containing "A", "W" and "b" ; stored for computing the backward pass efficiently """  
+	""" cache - a python tuple containing "A", "W" and "b" ; stored for computing the backward pass efficiently """	 
 	Z = np.dot(W, A) + b
-	assert(Z.shape == (W.shape[0], A.shape[1]))
 	
+	assert(Z.shape == (W.shape[0], A.shape[1]))
 	cache = (A, W, b)
 	
 	return Z, cache
@@ -122,7 +132,7 @@ def linear_forward(A, W, b):
 	
 def linear_activation_forward(A_prev, W, b, activation):
 	""" Implement the forward propagation for the LINEAR->ACTIVATION layer
-	Arguments: A_prev -- activations from previous layer (or input data): (size of previous layer, number of examples) """
+	Arguments: A_prev - activations from previous layer (or input data): (size of previous layer, number of examples) """
 	
 	if activation == "sigmoid":
 		Z, linear_cache = linear_forward(A_prev, W, b)
@@ -156,6 +166,7 @@ def L_model_forward(X, parameters):
 	# Implement LINEAR -> SIGMOID. Add "cache" to the "caches" list.
 	AL, cache = linear_activation_forward(A, parameters['W' + str(L)], parameters['b' + str(L)], activation = "sigmoid")
 	caches.append(cache)
+	
 	assert(AL.shape == (1,X.shape[1]))
 			
 	return AL, caches
@@ -165,12 +176,18 @@ def L_model_forward(X, parameters):
 def compute_cost(AL, Y):
 	""" Compute Cross-entropy loss or cost without regularization, optimize later """
 	m = Y.shape[1]
+	#AL += 1e-8
+	# try:
 	cost = - 1/m * (np.dot(Y, np.log(AL).T) + np.dot(1-Y, np.log(1-AL).T))
-	
+	#print(cost)
+	#print(m)
+	# except:
+		# return "gibberish"
 	# Remove unwanted dimensions
-	cost = np.squeeze(cost) # To make sure your cost's shape is what we expect
+	cost = np.squeeze(cost) # To make sure cost's shape is what we expect
 	assert(cost.shape == ())
-	
+	# assert(cost!='nan')
+	#print(cost)
 	return cost
 	
 	
@@ -194,7 +211,7 @@ def linear_backward(dZ, cache):
 	
 def linear_activation_backward(dA, cache, activation):
 	""" Implement the backward propagation for the LINEAR->ACTIVATION layer.
-	Arguments: dA -- post-activation gradient for current layer l """
+	Arguments: dA - post-activation gradient for current layer l """
 	
 	linear_cache, activation_cache = cache
 	
@@ -214,12 +231,12 @@ def L_model_backward(AL, Y, caches):
 	""" Implement the backward propagation for the [LINEAR->RELU] * (L-1) -> LINEAR -> SIGMOID group
 	
 	Arguments: AL -- probability vector, output of the forward propagation (L_model_forward())
-		Y -- true "label" vector (containing 0 if non-cat, 1 if cat)
+		Y - true "label" vector (containing 0 if non-cat, 1 if cat)
 	
 	Returns: grads -- A dictionary with the gradients """
 	
 	grads = {}
-	L = len(caches) # the number of layers
+	L = len(caches) # no. of layers
 	m = AL.shape[1]
 	Y = Y.reshape(AL.shape) # Y is the same shape as AL
 	
@@ -247,7 +264,7 @@ def L_model_backward(AL, Y, caches):
 def update_parameters(parameters, grads, learning_rate):
 	""" Update parameters using gradient descent
 	
-	parameters -- python dictionary containing your updated parameters 
+	parameters - python dictionary containing your updated parameters 
 				  parameters["W" + str(l)] = ... 
 				  parameters["b" + str(l)] = ... """
 	
@@ -257,6 +274,8 @@ def update_parameters(parameters, grads, learning_rate):
 	for l in range(L):
 		parameters["W" + str(l+1)] = parameters["W" + str(l+1)] - learning_rate * grads["dW"+ str(l+1)]
 		parameters["b" + str(l+1)] = parameters["b" + str(l+1)] - learning_rate * grads["db"+ str(l+1)]
+		
+		#print(parameters["W" + str(l+1)])
 		
 	return parameters
 
@@ -272,7 +291,7 @@ def predict(X, y, parameters):
 	
 	m = X.shape[1]
 	n = len(parameters) // 2
-	p = np.zeros((1,m))
+	pred = np.zeros((1,m))
 	
 	# Forward propagation
 	probab, caches = L_model_forward(X, parameters)
@@ -280,14 +299,26 @@ def predict(X, y, parameters):
 	# convert probability to 'Benign/Malignant' predictions
 	for i in range(0, probab.shape[1]):
 		if probab[0,i] > 0.5:
-			pred[0,i] = 'Benign'
+			pred[0,i] = 1
 		else:
-			pred[0,i] = 'Malignant'
+			pred[0,i] = 0
 	
 	#print ("predictions: " + str(p))
 	#print ("true labels: " + str(y))
-	c_matrix = confusion_matrix(pred, y)
-	true_negatives, false_positives, false_negatives, true_positives = c_matrix.ravel()
+	true_negatives = 0
+	false_negatives = 0
+	true_positives = 0
+	false_positives = 0
+	
+	for prediction, truth in zip(np.squeeze(pred), np.squeeze(y)):
+		if prediction == 1 and truth == 1:
+			true_negatives += 1
+		elif prediction == 1 and truth == 0:
+			false_negatives += 1
+		elif prediction == 0 and truth == 1:
+			false_positives += 1
+		elif prediction == 0 and truth == 0:
+			true_positives += 1
 
 	try:
 		total_predictions = true_negatives + false_negatives + false_positives + true_positives
@@ -305,9 +336,29 @@ def predict(X, y, parameters):
 
 	print("False positive rate: " + str((false_positives/(false_positives+true_negatives))*100))
 	print("False negative rate: " + str((false_negatives/(false_negatives+true_positives))*100))
-	#print("Accuracy: "	+ str(np.sum((p == y)/m)))
+	
+	## other methods to calculate accuracy
+	# print("accuracy: " + str(np.sum((p == y)/m)))
+	# print("accuracy: {} %".format(100 - np.mean(np.abs(pred - y)) * 100))
 		
-	return p	
+	return	
+	
+	
+	
+def predict_accuracy(X, y, parameters):
+	m = X.shape[1]
+	n = len(parameters) // 2
+	pred = np.zeros((1,m))
+	
+	probab, caches = L_model_forward(X, parameters)
+
+	for i in range(0, probab.shape[1]):
+		if probab[0,i] > 0.5:
+			pred[0,i] = 1
+		else:
+			pred[0,i] = 0
+	
+	print("accuracy: {} %".format(100 - np.mean(np.abs(pred - y)) * 100))
 	
 	
 	
