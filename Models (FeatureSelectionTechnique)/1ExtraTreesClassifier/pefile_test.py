@@ -1,11 +1,15 @@
-""" This file extracts the required information of a given file selecting only those
-attributes important from the viewpoint of a malware researcher,using the PE library """
+""" Extract the required information for a given test file & feed it
+into the trained model to classify the file as Benign or Malicious """
 
 import pefile
 import os
+import sys
+import pickle
 import array
 import math
 import csv, json
+import numpy as np
+from helper_functions import *
 
 
 def get_entropy(data):
@@ -191,49 +195,28 @@ def extract_infos(fpath):
 
 
 if __name__ == '__main__':
-	""" Extract information from binaries of benign PEfiles collected from 
-	various sources & add it to the existing database """
-	
+	b=0
+	m=0
 	lis = []
-	os.chdir(r"E:\00Malicious-PEfile-Detection")
-	lis = os.listdir('Benign train/')
+	lis = os.listdir('Benign/')
 	
-	#store infos as a collection of json lines
-	str = '{"Details":['
-	with open("Data/more_data.jsonl", "a") as outfile:
-		for i in range(len(lis)):
-			path = 'Benign train/' + lis[i]
-			data = extract_infos(path)
-		
-			if(data!=-1):
-				json_object = json.dumps(data)
-				
-				#write to more_data.jsonl 
-				if (i == 0):
-					outfile.write('{"Details":[' + json_object + ',')
-				elif (i != len(lis) - 1):
-					outfile.write(json_object + ',')
-				else:
-					outfile.write(json_object + ']}')
-				#print(i)
-	
-	#update data.csv (filename changed to updated_data)
-	data_file = open('Data/updated_data.csv', 'a')
-	csv_writer = csv.writer(data_file)
-	 
-	with open('Data/data.jsonl') as json_file: #handles closing of json_file as well
-		data = json.load(json_file)
-		element = data['Details']
-		count = 0
-		
-		for elem in element: 
-			if count == 0:
-				header = elem.keys() 
-				csv_writer.writerow(header) 
-				count += 1
-	 
-			#update some things manually, afterwards
-			#name and md5 sections set to -1 (dropping it anyway)
-			csv_writer.writerow(elem.values())
-		
-	data_file.close()
+	parameters = pickle.loads(open('classifier.pkl','rb').read())
+	features = pickle.loads(open('features.pkl','rb').read())
+	scaler = pickle.loads(open('scaler.pkl','rb').read())
+	for i in range(len(lis)):
+		#data = extract_infos(sys.argv[1])
+		path = 'Benign/' + lis[i]
+		data = extract_infos(path)
+		if(data!=-1):
+			pe_features = list(map(lambda x:data[x], features))
+			pe_features = np.array(pe_features)
+			pe_features = pe_features.reshape(1, -1)
+			X = scaler.transform(pe_features)
+			res = predict_binaries(X.T, parameters)
+			print ('The file is %s' % (res))
+			if(res == 'Benign'):
+				b += 1
+			else:
+				m += 1
+	print("No. of Benign files: " + str(b))
+	print("No. of malicious files: " + str(m))

@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 from helper_functions import *
+from helper_functions2 import *
 
 """ Implement 1 layer & Deep NN without optimization or regularization"""
 
 
 
-def model_0(X, Y, layers, learning_rate, mini_batch_size, epsilon, num_epochs, print_cost):
+def model_0(X, Y, X_dev, y_dev, layers, learning_rate, mini_batch_size, epsilon, num_epochs, print_cost):
 	
 	""" single hidden layer neural network model: 
 
@@ -29,7 +30,7 @@ def model_0(X, Y, layers, learning_rate, mini_batch_size, epsilon, num_epochs, p
 	# Initialize parameters differently & compare
 	parameters = initialize_parameters_he(layers)
 	#parameters = initialize_parameters_random(layers)
-	
+	temp = 0
 	# Optimize cost every iteration
 	for i in range(num_epochs):
 		# Define the random minibatches. Increment the seed to reshuffle the dataset differently after each epoch
@@ -65,8 +66,14 @@ def model_0(X, Y, layers, learning_rate, mini_batch_size, epsilon, num_epochs, p
 		# # Print the cost every 100 epoch
 		if print_cost and i % 100 == 0:
 			print ("Cost after epoch %i: %f" %(i, cost_avg))
+			predict_accuracy(X_dev, y_dev, parameters)
 		if print_cost and i % 100 == 0:
 			costs.append(cost_avg)
+			
+		
+		#predict_accuracy(X_dev, y_dev, parameters)
+		#print(acc)
+		
 				
 	# plot the cost
 	# plt.plot(costs)
@@ -77,7 +84,8 @@ def model_0(X, Y, layers, learning_rate, mini_batch_size, epsilon, num_epochs, p
 	
 	d = {"costs": costs,
 		 "parameters" : parameters,
-		 "learning_rate" : learning_rate
+		 "learning_rate" : learning_rate,
+		 "layers" : layers
 		}
 	
 	return d
@@ -92,20 +100,37 @@ if __name__ == '__main__':
 	y_test = y_test.reshape(1, y_test.shape[0])
 	
 	
-	# Analyze model for different learning_rates
-	learning_rates = [0.01, 0.001, 0.0001]
 	models = {}
-	for i in learning_rates:
-		print ("learning rate is: " + str(i))
-		models[i] = model_0(X_train, y_train, layers = [X_train.shape[0], 10, 10, 1], learning_rate = i, mini_batch_size = 16384,
-			epsilon = 1e-8, num_epochs = 1500, print_cost = True)
-
-	print ('\n' + "-------------------------------------------------------" + '\n')
-
+	# Tune no. of neurons for single hidden layer, no. of hidden layers
+	hidden_layer_neurons = [10] #5, 6, 8, 12, 15, 20
+	for i in hidden_layer_neurons:
+		print ("hidden layer size: " + str(i))
+		models[i] = model_0(X_train, y_train, X_dev, y_dev, layers = [X_train.shape[0], i, i, 5, 1], learning_rate = 0.001, mini_batch_size = 16384,
+			epsilon = 1e-8, num_epochs = 2301, print_cost = True)
+		# Accuracy for different sizes of hidden layer
+		predict(X_train, y_train, models[i]['parameters'])
+		predict(X_dev, y_dev, models[i]['parameters'])
+		predict(X_test, y_test, models[i]['parameters'])
+		print ('\n' + "-------------------------------------------------------" + '\n')
 	
-	# Plot & compare the costs for different learning_rates 	
-	for i in learning_rates:
-		plt.plot(np.squeeze(models[i]['costs']), label = str(models[i]['learning_rate']))
+	
+	### Analyze model for different learning_rates
+	# learning_rates = [0.01, 0.001, 0.0001]
+	# models = {}
+	# for i in learning_rates:
+		# print ("learning rate is: " + str(i))
+		# models[i] = model_0(X_train, y_train, layers = [X_train.shape[0], 10, 10, 1], learning_rate = i, mini_batch_size = 16384,
+			# epsilon = 1e-8, num_epochs = 1500, print_cost = True)
+		# print("Accuracy for learning rate: " + str(i))
+		# # Accuracy for Train/dev/test set respectively
+		# predict_accuracy(X_train, y_train, models[i]['parameters'])
+		# predict_accuracy(X_dev, y_dev, models[i]['parameters'])
+		# predict_accuracy(X_test, y_test, models[i]['parameters'])
+		# print ('\n' + "-------------------------------------------------------" + '\n')
+		
+	# Plot & compare the costs	
+	for i in hidden_layer_neurons:
+		plt.plot(np.squeeze(models[i]['costs']), label = str(models[i]['layers']))
 	plt.ylabel('cost')
 	plt.xlabel('iterations (hundreds)')
 	legend = plt.legend(loc='upper center', shadow=True)
@@ -113,9 +138,5 @@ if __name__ == '__main__':
 	frame.set_facecolor('0.90')
 	plt.show()
 	
-	for i in learning_rates:
-		print("Accuracy for learning rate: " + str(i))
-		# Accuracy for Train/dev/test set respectively
-		predict_accuracy(X_train, y_train, models[i]['parameters'])
-		predict_accuracy(X_dev, y_dev, models[i]['parameters'])
-		predict_accuracy(X_test, y_test, models[i]['parameters'])
+	open("classifier.pkl", 'wb').write(pickle.dumps(models[i]['parameters']))
+		

@@ -1,3 +1,0 @@
-This folder may contain several such binaries of PEfiles which one may use to extract infos & add them to the previous dataset.
-These 5 files are a sample of collection numerous such binaries I used to create additional dataset. "update_data.py" contains 
-the code for doing the same.

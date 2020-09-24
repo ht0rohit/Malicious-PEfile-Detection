@@ -45,7 +45,7 @@ def random_mini_batches(X, Y, mini_batch_size, seed):
 def sigmoid(z):
 	""" Arguments: z - A scalar or numpy array of any size """
 	sigm = 1 / (1 + np.exp(-z))
-	cache = sigm
+	cache = z
 	
 	return sigm, cache
 	
@@ -341,7 +341,7 @@ def predict(X, y, parameters):
 	# print("accuracy: " + str(np.sum((p == y)/m)))
 	# print("accuracy: {} %".format(100 - np.mean(np.abs(pred - y)) * 100))
 		
-	return	
+	return	accuracy
 	
 	
 	
@@ -362,13 +362,23 @@ def predict_accuracy(X, y, parameters):
 	
 	
 	
+def predict_binaries(X, parameters):
+	probab, caches = L_model_forward(X, parameters)
+
+	for i in range(0, probab.shape[1]):
+		if probab[0,i] > 0.5:
+			return "Malicious"
+		else:
+			return "Benign"
+	
+	
+	
 def print_mislabeled_images(classes, X, y, p):
 	pass
 
 
 
 def load_data():
-	os.chdir(r"E:\00Malicious-PEfile-Detection\Models (FeatureSelectionTechnique)\1ExtraTreesClassifier")
 	dataset = pickle.loads(open('split_data.pkl','rb').read())
 	
 	X_train, X_dev, X_test, y_train, y_dev, y_test = dataset

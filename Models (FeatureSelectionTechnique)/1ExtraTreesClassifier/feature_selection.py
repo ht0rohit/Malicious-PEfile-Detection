@@ -45,15 +45,13 @@ X_train, X_split, y_train, y_split = train_test_split(X, y , test_size=0.2, rand
 X_dev, X_test, y_dev, y_test = train_test_split(X_split, y_split , test_size=0.5, random_state = 0)
 
 
-#GroupBy no. of Malignant & Benign files to verify False_negatives & False_positives
-count = 0; count1 = 0
-for val in y_dev:
-	if val == 'Benign':
-		count += 1
-	else:
-		count1 += 1
-print("Benign: " + str(count))
-print("Malignant: " + str(count1))
+# # GroupBy no. of Malignant & Benign files to verify False_negatives & False_positives
+# count = 0; count1 = 0
+# for val in y_dev:
+	# if val == 1: count += 1
+	# else: count1 += 1
+# print("Benign: " + str(count))
+# print("Malignant: " + str(count1))
 
 
 #Select Features
@@ -64,7 +62,6 @@ X_train = model.transform(X_train)
 X_dev = model.transform(X_dev)
 X_test = model.transform(X_test)
 nbfeatures = X_train.shape[1]
-# print(str(X_train.shape) + "	" + str(X_dev.shape) + "	" + str(X_test.shape))
 
 features = []
 index = np.argsort(extratrees.feature_importances_)[::-1][:nbfeatures]
@@ -79,6 +76,7 @@ scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)	
 X_dev = scaler.transform(X_dev)
 X_test = scaler.transform(X_test)
+# print(str(X_train.shape) + "	" + str(X_dev.shape) + "	" + str(X_test.shape))
 
 
 ### ----------------------------------
@@ -103,10 +101,11 @@ X_test = scaler.transform(X_test)
 # winner = max(results, key=results.get)
 # print("Best model: " + winner)
 
-# Write the features nd Data to a file
+# Write the features nd data to a file
 split_data = [X_train.T, X_dev.T, X_test.T, y_train, y_dev, y_test]
 open(os.path.join("Models (FeatureSelectionTechnique)/1ExtraTreesClassifier/features.pkl"), 'wb').write(pickle.dumps(features))
 open(os.path.join("Models (FeatureSelectionTechnique)/1ExtraTreesClassifier/split_data.pkl"), 'wb').write(pickle.dumps(split_data))
+open(os.path.join("Models (FeatureSelectionTechnique)/1ExtraTreesClassifier/scaler.pkl"), 'wb').write(pickle.dumps(scaler))
 
 
 # clf = model[winner]
